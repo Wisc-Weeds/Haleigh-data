@@ -1,0 +1,906 @@
+---
+title: "POST"
+author: "Haleigh Ortmeier-Clarke"
+date: "8/6/2020"
+output: html_document
+---
+
+```{r}
+library(drc)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+POST <- read_csv("POST ALL SLIM.csv")
+#glimpse(POST)
+```
+
+#dicamba
+```{r warning=FALSE}
+dicamba <- POST %>% 
+  filter(AI=="dicamba")
+
+dicambamodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=dicamba)
+dicambamodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=dicamba)
+
+summary(dicambamodel)
+
+anova(dicambamodel, dicambamodel2)
+
+
+predict <- dicamba %>% 
+  select(Rate) %>% 
+  mutate(predict = as.data.frame(dicambamodel$predres)[,1])
+
+
+ED(dicambamodel2, c(58), type="absolute", interval ="delta")
+
+plot(dicambamodel, type="average", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(dicambamodel2, type="confidence", col=c(1,2), xlab="g ae/ha", 
+     legendPos=c(3.5,50))
+abline(v=140)
+ED(dicambamodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+
+
+```{r message=FALSE, warning=FALSE}
+plot(dicambamodel2, type="confidence", col=c(1,2), xlab="g ae/ha", log="",
+     legendPos=c(3.5,50))
+abline(v=200, h=63.13345)
+```
+
+```{r warning=FALSE}
+nd <- expand.grid(Rate=seq(0, 2240, by=1)) # add a sequence of values from herbicide rate 0 to max herbicide rate
+
+pm <- predict(dicambamodel, newdata = nd, interval="confidence") # add the model used - notice that this one is a single model for both species
+pm <- as.data.frame(pm) %>% # make it a data frame
+  mutate(Rate = 0:2240) %>% # add a new column of rates from 0 to max herbicide rate (0 to 2240)
+  filter(Rate == "560") # filter to the herbicide rate used 
+pm
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=seq(1, 2240, by=1))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata) # make separated data frame for each species
+
+pm <- predict(dicambamodel, newdata = newdata1, interval="confidence")
+pm <- as.data.frame(pm) %>% # make it a data frame
+  mutate(Rate = c(1:2240)) %>% # add a new column of rates from 0 to max herbicide rate (0 to 2240)
+  filter(Rate == "560") # filter to the herbicide rate used 
+pm
+
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata) # make separated data frame for each species
+
+pm <- predict(dicambamodel, newdata = newdata2, interval="confidence")
+pm <- as.data.frame(pm) %>% # make it a data frame
+  mutate(Rate = c(1:2240)) %>% # add a new column of rates from 0 to max herbicide rate (0 to 2240)
+  filter(Rate == "560") # filter to the herbicide rate used 
+pm
+
+
+
+
+```
+
+
+
+
+
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(dicambamodel, newdata = nd, interval="confidence")
+ 
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+dicamba$Rate0 <- dicamba$Rate
+dicamba$Rate0[dicamba$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(dicamba, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ae/ha", title="dicamba") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("dicambaPOST.png", height = 6, width=10, dpi=600)
+```
+
+
+#clopyralid
+```{r warning=FALSE}
+clopyralid <- POST %>% 
+  filter(AI=="clopyralid")
+
+
+clopyralidmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=clopyralid)
+clopyralidmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=clopyralid)
+summary(clopyralidmodel)
+
+anova(clopyralidmodel, clopyralidmodel2)
+
+plot(clopyralidmodel, type="average", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(clopyralidmodel2, type="confidence", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(clopyralidmodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(clopyralidmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+clopyralid$Rate0 <- clopyralid$Rate
+clopyralid$Rate0[clopyralid$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(clopyralid, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ae/ha", title="clopyralid") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("clopyralidPOST.png", height = 6, width=10, dpi=600)
+```
+
+
+#2,4-D
+```{r warning=FALSE}
+twofourD <- POST %>% 
+  filter(AI=="2,4-D")
+
+twofourDmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=twofourD)
+twofourDmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=twofourD)
+
+anova(twofourDmodel, twofourDmodel2)
+
+plot(twofourDmodel, type="average", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(twofourDmodel2, type="confidence", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(twofourDmodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(twofourDmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+twofourD$Rate0 <- twofourD$Rate
+twofourD$Rate0[twofourD$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(twofourD, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ae/ha", title="2,4-D") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("24DPOST.png", height = 6, width=10, dpi=600)
+```
+
+
+#rimsulfuroncombined
+```{r warning=FALSE}
+POSTrim <- POST %>% 
+  filter(AI=="rimsulfuron")
+
+POSTrimmodel1 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,NA,NA), names = c("slope", "upper", "ed50")), data=POSTrim)
+
+plot(POSTrimmodel1, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+```
+
+
+#rimsulfuron
+```{r warning=FALSE}
+POSTrim <- POST %>% 
+  filter(AI=="rimsulfuron")
+
+POSTrimmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTrim)
+POSTrimmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTrim)
+
+anova(POSTrimmodel, POSTrimmodel2)
+
+plot(POSTrimmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+
+plot(POSTrimmodel2, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+
+ED(POSTrimmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTrimmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTrim$Rate0 <- POSTrim$Rate
+POSTrim$Rate0[POSTrim$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTrim, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="rimsulfuron") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTrim.png", height = 6, width=10, dpi=600)
+```
+
+
+#chlorimuron-ethyl
+```{r warning=FALSE}
+POSTchlorethyl <- POST %>% 
+  filter(AI=="chlorimuron-ethyl")
+
+POSTchlorethylmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTchlorethyl)
+POSTchlorethylmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTchlorethyl)
+
+anova(POSTchlorethylmodel, POSTchlorethylmodel2)
+
+plot(POSTchlorethylmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTchlorethylmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTchlorethylmodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTchlorethylmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTchlorethyl$Rate0 <- POSTchlorethyl$Rate
+POSTchlorethyl$Rate0[POSTchlorethyl$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTchlorethyl, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="chlorimuron-ethyl") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTchlorethyl.png", height = 6, width=10, dpi=600)
+```
+
+#imazethapyr
+```{r warning=FALSE}
+POSTima <- POST %>% 
+  filter(AI=="imazethapyr")
+
+POSTimamodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTima)
+POSTimamodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTima)
+
+anova(POSTimamodel, POSTimamodel2)
+
+plot(POSTimamodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTimamodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTimamodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTimamodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTima$Rate0 <- POSTima$Rate
+POSTima$Rate0[POSTima$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTima, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="imazethapyr") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTima.png", height = 6, width=10, dpi=600)
+```
+
+#chloransulam-methyl
+```{r warning=FALSE}
+POSTchlormethyl <- POST %>% 
+  filter(AI=="chloransulam-methyl")
+
+
+POSTchlormethylmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTchlormethyl)
+POSTchlormethylmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTchlormethyl)
+
+anova(POSTchlormethylmodel, POSTchlormethylmodel2)
+
+plot(POSTchlormethylmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTchlormethylmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTchlorethylmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTchlormethyl$Rate0 <- POSTchlormethyl$Rate
+POSTchlormethyl$Rate0[POSTchlormethyl$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTchlormethyl, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="chloransulam-methyl") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTchlormethyl.png", height = 6, width=10, dpi=600)
+```
+
+#atrazine
+```{r warning=FALSE}
+POSTatrazine <- POST %>% 
+  filter(AI=="atrazine")
+
+POSTatrazinemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTatrazine)
+POSTatrazinemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTatrazine)
+
+anova(POSTatrazinemodel, POSTatrazinemodel2)
+
+plot(POSTatrazinemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTatrazinemodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTatrazinemodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTatrazinemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTatrazine$Rate0 <- POSTatrazine$Rate
+POSTatrazine$Rate0[POSTatrazine$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTatrazine, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="atrazine") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTatrazine.png", height = 6, width=10, dpi=600)
+```
+
+#fomesafen
+```{r warning=FALSE}
+POSTfomesafen <- POST %>% 
+  filter(AI=="fomesafen")
+
+POSTfomesafenmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTfomesafen)
+POSTfomesafenmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTfomesafen)
+
+anova(POSTfomesafenmodel, POSTfomesafenmodel2)
+
+plot(POSTfomesafenmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTfomesafenmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTfomesafenmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTfomesafen$Rate0 <- POSTfomesafen$Rate
+POSTfomesafen$Rate0[POSTfomesafen$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTfomesafen, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="fomesafen") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTfomesafen.png", height = 6, width=10, dpi=600)
+```
+
+#isoxaflutole
+```{r warning=FALSE}
+POSTisoxaflutole <- POST %>% 
+  filter(AI=="isoxaflutole")
+
+POSTisoxaflutolemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTisoxaflutole)
+POSTisoxaflutolemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTisoxaflutole)
+
+anova(POSTisoxaflutolemodel, POSTisoxaflutolemodel2)
+
+plot(POSTisoxaflutolemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTisoxaflutolemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTisoxaflutolemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTisoxaflutole$Rate0 <- POSTisoxaflutole$Rate
+POSTisoxaflutole$Rate0[POSTisoxaflutole$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTisoxaflutole, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="isoxaflutole") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTisoxaflutole.png", height = 6, width=10, dpi=600)
+```
+
+#topramezone
+```{r warning=FALSE}
+POSTtopramezone <- POST %>% 
+  filter(AI=="topramezone")
+
+POSTtopramezonemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTtopramezone)
+POSTtopramezonemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTtopramezone)
+
+
+anova(POSTtopramezonemodel, POSTtopramezonemodel2)
+
+plot(POSTtopramezonemodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTtopramezonemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r warning=FALSE}
+
+plot(Biomass_Red.*100 ~ Rate, data= POSTtopramezone)
+ggplot(POSTtopramezone, aes(x=Rate, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_smooth(method = "loess", se=FALSE, size=1) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="topramezone") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() +  theme(axis.text=element_text(size=16)) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTtopramezone.png", height = 6, width=10, dpi=600)
+#geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar)) 
+
+#mesomodel <- drm(BioRed*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,NA, NA), names = c("slope", "upper", "ed50")), data=meso)
+
+#plot(mesomodel, type="average", col=c(1,2), xlab="Rate of herbicide",log="", legendPos=c(3.5,50))
+
+```
+
+#mesotrione
+```{r warning=FALSE}
+POSTmesotrione <- POST %>% 
+  filter(AI=="mesotrione")
+
+POSTmesomodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTmesotrione)
+
+POSTmesomodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTmesotrione)
+
+anova(POSTmesomodel, POSTmesomodel2)
+
+
+plot(POSTmesomodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTmesomodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTmesomodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r warning=FALSE}
+POSTmesotrione <- POST %>% 
+  filter(AI=="mesotrione")
+
+plot(Biomass_Red.*100 ~ Rate, data= POSTmesotrione)
+ggplot(POSTmesotrione, aes(x=Rate, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_smooth(method = "loess", se=FALSE, size=1) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="mesotrione") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() +  theme(axis.text=element_text(size=16)) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTmesotrione.png", height = 6, width=10, dpi=600)
+#geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar)) 
+
+#mesomodel <- drm(BioRed*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,NA, NA), names = c("slope", "upper", "ed50")), data=meso)
+
+#plot(mesomodel, type="average", col=c(1,2), xlab="Rate of herbicide",log="", legendPos=c(3.5,50))
+
+```
+
+#tembotrione
+```{r warning=FALSE}
+POSTtembotrione <- POST %>% 
+  filter(AI=="tembotrione")
+
+POSTtembotrionemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTtembotrione)
+POSTtembotrionemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTtembotrione)
+
+anova(POSTtembotrionemodel, POSTtembotrionemodel2)
+
+plot(POSTtembotrionemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTtembotrionemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTtembotrionemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTtembotrione$Rate0 <- POSTtembotrione$Rate
+POSTtembotrione$Rate0[POSTtembotrione$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTtembotrione, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="tembotrione") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTtembotrione.png", height = 6, width=10, dpi=600)
+```
+
+#sethoxydim
+```{r warning=FALSE}
+POSTsethoxydim <- POST %>% 
+  filter(AI=="sethoxydim")
+
+POSTsethoxydimmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTsethoxydim)
+POSTsethoxydimmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTsethoxydim)
+
+anova(POSTsethoxydimmodel, POSTsethoxydimmodel2)
+
+plot(POSTsethoxydimmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTsethoxydimmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTsethoxydimmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTsethoxydimmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTsethoxydim$Rate0 <- POSTsethoxydim$Rate
+POSTsethoxydim$Rate0[POSTsethoxydim$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTsethoxydim, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="sethoxydim") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTsethoxydim.png", height = 6, width=10, dpi=600)
+```
+
+
+#clethodim
+```{r warning=FALSE}
+POSTclethodim <- POST %>% 
+  filter(AI=="clethodim")
+
+POSTclethodimmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=W1.3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTclethodim)
+POSTclethodimmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTclethodim)
+
+summary(POSTclethodimmodel)
+anova(POSTclethodimmodel, POSTclethodimmodel2)
+
+plot(POSTclethodimmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTclethodimmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTclethodimmodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTclethodimmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTclethodim$Rate0 <- POSTclethodim$Rate
+POSTclethodim$Rate0[POSTclethodim$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTclethodim, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="clethodim") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTclethodim.png", height = 6, width=10, dpi=600)
+```
+
+#bromoxynil
+```{r warning=FALSE}
+POSTbromoxynil <- POST %>% 
+  filter(AI=="bromoxynil")
+
+POSTbromoxynilmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTbromoxynil)
+POSTbromoxynilmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTbromoxynil)
+
+anova(POSTbromoxynilmodel, POSTbromoxynilmodel2)
+
+plot(POSTbromoxynilmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+
+ED(POSTbromoxynilmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r warning=FALSE}
+
+plot(Biomass_Red.*100 ~ Rate, data= POSTbromoxynil)
+ggplot(POSTbromoxynil, aes(x=Rate, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_smooth(method = "loess", se=FALSE, size=1) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="bromoxynil") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() +  theme(axis.text=element_text(size=16)) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTbromoxynil.png", height = 6, width=10, dpi=600)
+#geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar)) 
+
+#mesomodel <- drm(BioRed*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,NA, NA), names = c("slope", "upper", "ed50")), data=meso)
+
+#plot(mesomodel, type="average", col=c(1,2), xlab="Rate of herbicide",log="", legendPos=c(3.5,50))
+
+```
+
+#bentazon
+```{r warning=FALSE}
+POSTbentazon <- POST %>% 
+  filter(AI=="bentazon")
+
+
+POSTbentazonmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTbentazon)
+POSTbentazonmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTbentazon)
+
+anova(POSTbentazonmodel, POSTbentazonmodel2)
+
+plot(POSTbentazonmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTbentazonmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTbentazonmodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTbentazonmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTbentazon$Rate0 <- POSTbentazon$Rate
+POSTbentazon$Rate0[POSTbentazon$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTbentazon, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="bentazon") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTbentazon.png", height = 6, width=10, dpi=600)
+```
+
+#glyphosate
+```{r warning=FALSE}
+POSTglyphosate <- POST %>% 
+  filter(AI=="glyphosate")
+
+plot(Biomass_Red.*100 ~ Rate, data=POSTglyphosate)
+
+POSTglyphosatemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTglyphosate)
+POSTglyphosatemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTglyphosate)
+
+anova(POSTglyphosatemodel, POSTglyphosatemodel2)
+
+plot(POSTglyphosatemodel2, type="confidence", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTglyphosatemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r warning=FALSE}
+
+plot(Biomass_Red.*100 ~ Rate, data= POSTglyphosate)
+ggplot(POSTglyphosate, aes(x=Rate, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_smooth(method = "loess", se=FALSE, size=1) + geom_point(stat="identity") + labs(y="", x="g ae/ha", title="glyphosate") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() +  theme(axis.text=element_text(size=16)) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTglyphosate.png", height = 6, width=10, dpi=600)
+#geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar)) 
+
+#mesomodel <- drm(BioRed*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,NA, NA), names = c("slope", "upper", "ed50")), data=meso)
+
+#plot(mesomodel, type="average", col=c(1,2), xlab="Rate of herbicide",log="", legendPos=c(3.5,50))
+
+```
+
+#glufosinate
+```{r warning=FALSE}
+POSTglufosinate <- POST %>% 
+  filter(AI=="glufosinate")
+
+POSTglufosinatemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTglufosinate)
+POSTglufosinatemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTglufosinate)
+
+anova(POSTglufosinatemodel, POSTglufosinatemodel2)
+
+plot(POSTglufosinatemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTglufosinatemodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTglufosinatemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTglufosinate$Rate0 <- POSTglufosinate$Rate
+POSTglufosinate$Rate0[POSTglufosinate$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTglufosinate, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="glufosinate") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTglufosinate.png", height = 6, width=10, dpi=600)
+```
+
+#lactofen
+```{r warning=FALSE}
+POSTlactofen <- POST %>% 
+  filter(AI=="lactofen")
+
+POSTlactofenmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTlactofen)
+POSTlactofenmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTlactofen)
+
+anova(POSTlactofenmodel, POSTlactofenmodel2)
+
+plot(POSTlactofenmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTlactofenmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTlactofenmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTlactofenmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTlactofen$Rate0 <- POSTlactofen$Rate
+POSTlactofen$Rate0[POSTlactofen$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTlactofen, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="lactofen") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTlactofen.png", height = 6, width=10, dpi=600)
+```
+
+#fluthiacet-methyl
+```{r warning=FALSE}
+POSTfluthmethyl <- POST %>% 
+  filter(AI=="fluthiacet-methyl")
+
+POSTfluthmethylmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTfluthmethyl)
+POSTfluthmethylmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=POSTfluthmethyl)
+
+anova(POSTfluthmethylmodel, POSTfluthmethylmodel2)
+
+plot(POSTfluthmethylmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(POSTfluthmethylmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(POSTfluthmethylmodel2, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(POSTfluthmethylmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+POSTfluthmethyl$Rate0 <- POSTfluthmethyl$Rate
+POSTfluthmethyl$Rate0[POSTfluthmethyl$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(POSTfluthmethyl, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="fluthiacet-methyl") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("POSTfluthiacet-methyl.png", height = 6, width=10, dpi=600)
+```
+

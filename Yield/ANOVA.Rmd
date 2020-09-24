@@ -1,0 +1,103 @@
+---
+title: "ANOVA"
+author: "Maxwel Coura Oliveira"
+date: "10/29/2019"
+output: pdf_document
+---
+
+```{r}
+library(tidyverse)
+library(lme4)
+library(nortest)
+library(ggpubr)
+library(lmerTest)
+library(emmeans)
+```
+
+
+
+```{r}
+data <- read_csv("Yield.csv")
+data$Seeding_Rate <- as.factor(data$Seeding_Rate) # put seeding rate as a factor
+data$Nitrogen_Rate <- as.factor(data$Nitrogen_Rate)
+glimpse(data)
+```
+
+```{r}
+ggdensity(data$Grain_Yield)
+ggdensity(sqrt(data$Grain_Yield))
+```
+
+
+```{r}
+ggplot(data, aes(x=Nitrogen_Rate, y=Grain_Yield, fill=Cultivar)) + geom_bar(stat="summary", position = "dodge") + facet_grid(~Location)
+```
+
+
+
+```{r}
+Model <- lmer(sqrt(Grain_Yield) ~ Nitrogen_Rate * Seeding_Rate * Location * Cultivar + (1|Rep), data=data)
+#summary(Model)
+anova(Model)
+```
+
+
+```{r}
+emmip(Model, Nitrogen_Rate ~ Location | Location, type="response") # see the interactions
+```
+
+
+```{r, warning=FALSE}
+plot(emmeans(Model, ~ Location | Nitrogen_Rate, type="response"))
+```
+
+
+
+
+# Cultivar and Location
+
+```{r}
+lsm1 <- emmeans(Model, ~ Cultivar | Location, contr="pairwise", adjust="none", type="response")
+lsm1
+```
+
+
+```{r}
+plot(lsm1, comparisons =TRUE, adjust="none")
+```
+
+
+
+```{r}
+LC <- as.data.frame(lsm1$emmeans)
+ggplot(LC, aes(x=Cultivar, y=response)) + geom_bar(stat="identity") + 
+  #geom_point() +
+  geom_errorbar(aes(ymin  =  lower.CL, ymax  =  upper.CL), width =  0.2, size  =  0.7) +
+  facet_grid(~Location)
+```
+
+
+
+# Nitogen and Location
+
+
+```{r}
+lsm2 <- emmeans(Model, ~ Nitrogen_Rate | Location, contr="pairwise", adjust="none", type="response")
+lsm2
+```
+
+
+```{r}
+plot(lsm2, comparisons =TRUE, adjust="none") + theme_bw()
+```
+
+
+
+```{r}
+LN <- as.data.frame(lsm2$emmeans)
+ggplot(LN, aes(x=Nitrogen_Rate, y=response)) + geom_bar(stat="identity") + theme_bw() +
+  #geom_point() +
+  geom_errorbar(aes(ymin  =  lower.CL, ymax  =  upper.CL), width =  0.2, size  =  0.7) +
+  facet_grid(~Location)
+```
+

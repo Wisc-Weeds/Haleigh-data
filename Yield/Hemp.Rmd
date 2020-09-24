@@ -1,0 +1,115 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(lme4)
+library(nortest)
+library(ggpubr)
+library(lmerTest)
+library(emmeans)
+```
+
+
+
+```{r}
+data <- read_csv("Yield.csv")
+data$Seeding_Rate <- as.factor(data$Seeding_Rate) # put seeding rate as a factor
+glimpse(data)
+```
+
+
+
+```{r}
+ggplot(data, aes(x=Nitrogen_Rate, y=Grain_Yield, color=Seeding_Rate)) + geom_point() + facet_grid(Location ~ Cultivar) +
+  geom_smooth(method="lm", se=FALSE)
+```
+
+
+```{r}
+bartlett.test(Grain_Yield ~ Nitrogen_Rate, data = data) # homecedasticity 
+
+ggdensity(data$Grain_Yield) # histo
+ggdensity(sqrt(data$Grain_Yield)) # histo
+ggqqplot(data$Grain_Yield)
+ggqqplot(sqrt(data$Grain_Yield))
+hist(data$Grain_Yield)
+hist(sqrt(data$Grain_Yield))
+pearson.test(sqrt(data$Grain_Yield)) # test of normality
+```
+
+
+
+```{r}
+Model <- lmer(sqrt(Grain_Yield) ~ Nitrogen_Rate*Seeding_Rate*Location*Cultivar + (1|Location:Rep), data=data)  # not my model
+#summary(Model)
+anova(Model, type="I")
+```
+
+
+```{r}
+Model2 <- lmer(sqrt(Grain_Yield) ~ Nitrogen_Rate*Location*Cultivar + (1|Location:Rep), data=data) # my model
+summary(Model2)
+anova(Model, Model2, test="F") # test two models
+anova(Model2, type="I") # test the factors
+```
+
+
+
+```{r}
+Model3 <- lmer(sqrt(Grain_Yield) ~ Nitrogen_Rate*Location*Cultivar + (1|Location:Rep), data=data) # not my model
+#summary(Model3)
+anova(Model2, Model3, test="F") # test two models
+anova(Model3, type="I") # test the factors
+```
+
+
+
+
+
+```{r}
+ggplot(data, aes(x=Nitrogen_Rate, y=Grain_Yield)) + geom_point(aes(color=Seeding_Rate)) + facet_grid(Location ~ Cultivar) +
+  geom_smooth(method="lm", se=TRUE) + theme_bw() 
+```
+
+
+
+
+# Get parameters
+
+```{r}
+ARL <- data %>% 
+  filter(Location == "ARL" & Cultivar =="X-59")
+
+Arl <- lmer(Grain_Yield ~ Nitrogen_Rate + (1|Location:Rep), data=ARL) # my model
+summary(Arl)
+```
+
+
+
+```{r}
+ARL2 <- data %>% 
+  filter(Location == "ARL" & Cultivar =="CRS-1")
+
+Arl2 <- lmer(Grain_Yield ~ Nitrogen_Rate + (1|Location:Rep), data=ARL2) # my model
+summary(Arl2)
+```
+
+
+```{r}
+CF <- data %>% 
+  filter(Location == "CF" & Cultivar =="CRS-1")
+
+Cf <- lmer(Grain_Yield ~ Nitrogen_Rate + (1|Location:Rep), data=CF) # my model
+summary(Cf)
+```
+
+```{r}
+CF1 <- data %>% 
+  filter(Location == "CF" & Cultivar =="X-59")
+
+Cf2 <- lmer(Grain_Yield ~ Nitrogen_Rate + (1|Location:Rep), data=CF1) # my model
+summary(Cf2)
+```

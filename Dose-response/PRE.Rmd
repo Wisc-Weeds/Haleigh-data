@@ -1,0 +1,937 @@
+---
+title: "PRE"
+author: "Haleigh Ortmeier-Clarke"
+date: "5/11/2020"
+output: html_document
+---
+
+```{r}
+library(drc)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+
+
+```{r}
+PRE <- read_csv("PRE ALL.csv")
+glimpse(PRE)
+```
+
+
+#dicamba
+```{r warning=FALSE}
+dicamba <- PRE %>% 
+  filter(AI=="dicamba")
+
+dicambamodel <- drm(Biomass ~ Rate, Cultivar, fct=l3(fixed =c(NA,NA,NA), names = c("slope", "upper", "ed50")), data=dicamba)
+summary(dicambamodel)
+
+# I think your upper limit is not too bad. It is closer to 100. Then you do not need to lock the upper limit.
+
+dicambamodel2 <- drm(Biomass ~ Rate, fct=l3(fixed =c(NA,NA,NA), names = c("slope", "upper", "ed50")), data=dicamba)
+summary(dicambamodel2)
+
+
+anova(dicambamodel, dicambamodel2) # p-value = 0.2196 - You can combine cultivars
+
+
+plot(dicambamodel, type="confidence", col=c(1,2), xlab="g ae/ha")
+
+
+plot(dicambamodel2, type="confidence", col=c(1,2), xlab="g ae/ha")
+
+ED(dicambamodel, c(10, 50, 90), type="relative", interval ="delta")
+```
+
+
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(2240), by=0.001)))
+
+#newdata1 <- data.frame(Cultivar = "X-59", newdata)
+#newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+#nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(dicambamodel2, newdata = newdata, interval="confidence")
+
+
+newdata$p <- pm[,1]
+newdata$pmin <- pm[,2]
+newdata$pmax <- pm[,3]
+
+dicamba$Rate0 <- dicamba$Rate
+dicamba$Rate0[dicamba$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(dicamba, aes(x=Rate0, y=Biomass_Red.*100)) + geom_point(alpha=0.5) + 
+                labs(y="Hemp injury (%)", x=expression(bold(paste("Dicamba (g ae"^"-2",")")))) +
+                theme_bw() + 
+                #coord_trans(x="log") + 
+                geom_line(data=newdata, aes(x=Rate, y=p), size=1, color="black") + 
+                theme(panel.grid = element_blank(), axis.text = element_text(size=13, color="black"),
+                     text = element_text(face="bold", size=16, color="black")) + 
+  ggsave("dicambaPRE.png", height = 6, width=6, dpi=600)
+```
+
+
+#clopyralid
+```{r warning=FALSE}
+clopyralid <- PRE %>% 
+  filter(AI=="clopyralid")
+
+clopyralidmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=clopyralid)
+clopyralidmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=clopyralid)
+
+anova(clopyralidmodel, clopyralidmodel2) # con't combine curves
+
+plot(clopyralidmodel, type="confidence", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(clopyralidmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(clopyralidmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+clopyralid$Rate0 <- clopyralid$Rate
+clopyralid$Rate0[clopyralid$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(clopyralid, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ae/ha", title="clopyralid") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("clopyralidPRE.png", height = 6, width=10, dpi=600)
+```
+
+
+#2,4-D
+```{r warning=FALSE}
+twofourD <- PRE %>% 
+  filter(AI=="2,4-D")
+
+twofourDmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=twofourD)
+twofourDmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=twofourD)
+
+anova(twofourDmodel, twofourDmodel2)
+
+plot(twofourDmodel, type="average", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(twofourDmodel2, type="confidence", col=c(1,2), xlab="g ae/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(twofourDmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(twofourDmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+twofourD$Rate0 <- twofourD$Rate
+twofourD$Rate0[twofourD$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(twofourD, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ae/ha", title="2,4-D") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("24DPRE.png", height = 6, width=10, dpi=600)
+```
+
+#rimsulfuron
+```{r warning=FALSE}
+PRErim <- PRE %>% 
+  filter(AI=="rimsulfuron")
+#& Run=="1"
+PRErimmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PRErim)
+summary(PRErimmodel)
+PRErimmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PRErim)
+summary(PRErimmodel)
+
+anova(PRErimmodel, PRErimmodel2)
+
+plot(PRErimmodel, type="all", col=c(1,2), xlab="g ai/ha", #log="", 
+     legendPos=c(3.5,50))
+plot(PRErimmodel2, type="confidence", col=c(1,2), xlab="g ai/ha", #log="", 
+     legendPos=c(3.5,50))
+ED(PRErimmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PRErimmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PRErim$Rate0 <- PRErim$Rate
+PRErim$Rate0[PRErim$Rate0==0] <- 0.001
+```
+
+```{r}
+PRErim$Run<-as.factor(PRErim$Run)
+ggplot(PRErim, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar, lty=Run)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="rimsulfuron") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PRErim.png", height = 6, width=10, dpi=600)
+```
+
+
+# Chlorimuron-ethyl
+
+```{r warning=FALSE}
+PREchlorethyl <- PRE %>% 
+  filter(AI=="chlorimuron-ethyl")
+
+PREchlorethylmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,NA,NA), names = c("slope", "upper", "ed50")), data=PREchlorethyl)
+summary(PREchlorethylmodel)
+
+
+PREchlorethylmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,NA,NA), names = c("slope", "upper", "ed50")), data=PREchlorethyl)
+summary(PREchlorethylmodel2)
+
+anova(PREchlorethylmodel, PREchlorethylmodel2)
+
+plot(PREchlorethylmodel, type="all", col=c(1,2), xlab="g ai/ha", #log="", 
+     legendPos=c(3.5,50))
+ED(PREchlorethylmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREchlorethylmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREchlorethyl$Rate0 <- PREchlorethyl$Rate
+PREchlorethyl$Rate0[PREchlorethyl$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREchlorethyl, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="chlorimuron-ethyl") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREchlorethyl.png", height = 6, width=10, dpi=600)
+```
+
+#imazethapyr
+```{r warning=FALSE}
+PREima <- PRE %>% 
+  filter(AI=="imazethapyr")
+
+PREimamodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREima)
+PREimamodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREima)
+
+anova(PREimamodel, PREimamodel2)
+
+plot(PREimamodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREimamodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREimamodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREimamodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREima$Rate0 <- PREima$Rate
+PREima$Rate0[PREima$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREima, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="imazethapyr") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREima.png", height = 6, width=10, dpi=600)
+```
+
+#chloransulam-methyl
+```{r warning=FALSE}
+PREchlormethyl <- PRE %>% 
+  filter(AI=="chloransulam-methyl")
+
+
+PREchlormethylmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREchlormethyl)
+PREchlormethylmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREchlormethyl)
+
+anova(PREchlormethylmodel, PREchlormethylmodel2)
+
+plot(PREchlormethylmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREchlormethylmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREchlorethylmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREchlormethyl$Rate0 <- PREchlormethyl$Rate
+PREchlormethyl$Rate0[PREchlormethyl$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREchlormethyl, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="chloransulam-methyl") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREchlormethyl.png", height = 6, width=10, dpi=600)
+```
+
+#atrazine
+```{r warning=FALSE}
+PREatrazine <- PRE %>% 
+  filter(AI=="atrazine")
+
+PREatrazinemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREatrazine)
+PREatrazinemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREatrazine)
+
+anova(PREatrazinemodel, PREatrazinemodel2)
+
+plot(PREatrazinemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREatrazinemodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREatrazinemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREatrazinemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREatrazine$Rate0 <- PREatrazine$Rate
+PREatrazine$Rate0[PREatrazine$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREatrazine, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="atrazine") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREatrazine.png", height = 6, width=10, dpi=600)
+```
+
+#fomesafen
+```{r warning=FALSE}
+PREfomesafen <- PRE %>% 
+  filter(AI=="fomesafen")
+
+PREfomesafenmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREfomesafen)
+PREfomesafenmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREfomesafen)
+
+anova(PREfomesafenmodel,PREfomesafenmodel2)
+
+plot(PREfomesafenmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREfomesafenmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREfomesafenmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREfomesafenmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREfomesafen$Rate0 <- PREfomesafen$Rate
+PREfomesafen$Rate0[PREfomesafen$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREfomesafen, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="fomesafen") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREfomesafen.png", height = 6, width=10, dpi=600)
+```
+
+#isoxaflutole
+```{r warning=FALSE}
+PREisoxaflutole <- PRE %>% 
+  filter(AI=="isoxaflutole")
+
+PREisoxaflutolemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREisoxaflutole)
+PREisoxaflutolemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREisoxaflutole)
+
+anova(PREisoxaflutolemodel, PREisoxaflutolemodel2)
+
+plot(PREisoxaflutolemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREisoxaflutolemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREisoxaflutolemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREisoxaflutole$Rate0 <- PREisoxaflutole$Rate
+PREisoxaflutole$Rate0[PREisoxaflutole$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREisoxaflutole, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="isoxaflutole") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREisoxaflutole.png", height = 6, width=10, dpi=600)
+```
+
+#topramezone
+```{r warning=FALSE}
+PREtopramezone <- PRE %>% 
+  filter(AI=="topramezone")
+
+PREtopramezonemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREtopramezone)
+PREtopramezonemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREtopramezone)
+
+anova(PREtopramezonemodel, PREtopramezonemodel2)
+
+plot(PREtopramezonemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREtopramezonemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREtopramezonemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREtopramezone$Rate0 <- PREtopramezone$Rate
+PREtopramezone$Rate0[PREtopramezone$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREtopramezone, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="topramezone") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREtopramezone.png", height = 6, width=10, dpi=600)
+```
+
+#mesotrione
+```{r warning=FALSE}
+PREmesotrione <- PRE %>% 
+  filter(AI=="mesotrione")
+
+PREmesomodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100, NA), names = c("slope", "upper", "ed50")), data=PREmesotrione)
+PREmesomodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100, NA), names = c("slope", "upper", "ed50")), data=PREmesotrione)
+
+anova(PREmesomodel, PREmesomodel2)
+
+
+plot(PREmesomodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREmesomodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r warning=FALSE}
+PREmesotrione <- PRE %>% 
+  filter(AI=="mesotrione")
+
+plot(Biomass_Red.*100 ~ Rate, data= PREmesotrione)
+ggplot(PREmesotrione, aes(x=g ai/ha, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_smooth(method = "loess", se=FALSE, size=1) + geom_point(stat="identity") + labs(y="", x="", title="mesotrione") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() +  theme(axis.text=element_text(size=16)) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREmesotrione.png", height = 6, width=10, dpi=600)
+#geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar)) 
+
+#mesomodel <- drm(BioRed*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,NA, NA), names = c("slope", "upper", "ed50")), data=meso)
+
+#plot(mesomodel, type="average", col=c(1,2), xlab="Rate of herbicide",log="", legendPos=c(3.5,50))
+
+```
+
+#tembotrione
+```{r warning=FALSE}
+PREtembotrione <- PRE %>% 
+  filter(AI=="tembotrione")
+
+PREtembotrionemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREtembotrione)
+PREtembotrionemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREtembotrione)
+
+
+anova(PREtembotrionemodel, PREtembotrionemodel2)
+
+plot(PREtembotrionemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREtembotrionemodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREtembotrionemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREtembotrionemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREtembotrione$Rate0 <- PREtembotrione$Rate
+PREtembotrione$Rate0[PREtembotrione$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREtembotrione, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="tembotrione") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREtembotrione.png", height = 6, width=10, dpi=600)
+```
+
+#metribuzin
+```{r warning=FALSE}
+PREmetribuzin <- PRE %>% 
+  filter(AI=="metribuzin")
+
+PREmetribuzinmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREmetribuzin)
+PREmetribuzinmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREmetribuzin)
+
+anova(PREmetribuzinmodel, PREmetribuzinmodel2)
+
+plot(PREmetribuzinmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREmetribuzinmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREmetribuzinmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREmetribuzinmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREmetribuzin$Rate0 <- PREmetribuzin$Rate
+PREmetribuzin$Rate0[PREmetribuzin$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREmetribuzin, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="metribuzin") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREmetribuzin.png", height = 6, width=10, dpi=600)
+```
+
+
+#sulfentrazone
+```{r warning=FALSE}
+PREsulfentrazone <- PRE %>% 
+  filter(AI=="sulfentrazone")
+
+PREsulfentrazonemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREsulfentrazone)
+PREsulfentrazonemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREsulfentrazone)
+
+anova(PREsulfentrazonemodel, PREsulfentrazonemodel2)
+
+plot(PREsulfentrazonemodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREsulfentrazonemodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREsulfentrazonemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREsulfentrazonemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREsulfentrazone$Rate0 <- PREsulfentrazone$Rate
+PREsulfentrazone$Rate0[PREsulfentrazone$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREsulfentrazone, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="sulfentrazone") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREsulfentrazone.png", height = 6, width=10, dpi=600)
+```
+
+#flumioxazin
+```{r warning=FALSE}
+PREflumioxazin <- PRE %>% 
+  filter(AI=="flumioxazin")
+
+PREflumioxazinmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREflumioxazin)
+PREflumioxazinmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREflumioxazin)
+
+anova(PREflumioxazinmodel, PREflumioxazinmodel2)
+
+plot(PREflumioxazinmodel, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREflumioxazinmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREflumioxazinmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREflumioxazin$Rate0 <- PREflumioxazin$Rate
+PREflumioxazin$Rate0[PREflumioxazin$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREflumioxazin, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="flumioxazin") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREflumioxazin.png", height = 6, width=10, dpi=600)
+```
+
+#saflufenacil
+```{r warning=FALSE}
+PREsaflufenacil <- PRE %>% 
+  filter(AI=="saflufenacil")
+
+
+PREsaflufenacilmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREsaflufenacil)
+
+PREsaflufenacilmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREsaflufenacil)
+
+anova(PREsaflufenacilmodel, PREsaflufenacilmodel2)
+
+
+
+plot(PREsaflufenacilmodel, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREsaflufenacilmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREsaflufenacilmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREsaflufenacilmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREsaflufenacil$Rate0 <- PREsaflufenacil$Rate
+PREsaflufenacil$Rate0[PREsaflufenacil$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREsaflufenacil, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="saflufenacil") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREsaflufenacil.png", height = 6, width=10, dpi=600)
+```
+
+#pyroxasulfone
+```{r warning=FALSE}
+PREpyroxasulfone <- PRE %>% 
+  filter(AI=="pyroxasulfone")
+
+PREpyroxasulfonemodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREpyroxasulfone)
+PREpyroxasulfonemodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREpyroxasulfone)
+
+anova(PREpyroxasulfonemodel, PREpyroxasulfonemodel2)
+
+plot(PREpyroxasulfonemodel, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREpyroxasulfonemodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREpyroxasulfonemodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREpyroxasulfone$Rate0 <- PREpyroxasulfone$Rate
+PREpyroxasulfone$Rate0[PREpyroxasulfone$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREpyroxasulfone, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="pyroxasulfone") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREpyroxasulfone.png", height = 6, width=10, dpi=600)
+```
+
+#dimethenamid-p
+```{r warning=FALSE}
+PREdimethp <- PRE %>% 
+  filter(AI=="dimethenamid-P")
+
+PREdimethpmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREdimethp)
+PREdimethpmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREdimethp)
+
+anova(PREdimethpmodel, PREdimethpmodel2)
+
+plot(PREdimethpmodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREdimethpmodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREdimethpmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREdimethpmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREdimethp$Rate0 <- PREdimethp$Rate
+PREdimethp$Rate0[PREdimethp$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREdimethp, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="dimethenamid-P") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREdimethp.png", height = 6, width=10, dpi=600)
+```
+
+
+
+#acetochlor-1
+```{r warning=FALSE}
+PREacecto1 <- PRE %>% 
+  filter(AI=="acetochlor-1")
+
+PREacecto1emodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREacecto1)
+PREacecto1emodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREacecto1)
+
+anova(PREacecto1emodel, PREacecto1emodel2)
+
+plot(PREacecto1emodel, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREacecto1emodel2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREacecto1emodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREacecto1emodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREacecto1$Rate0 <- PREacecto1$Rate
+PREacecto1$Rate0[PREacecto1$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREacecto1, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="acetochlor-1") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREacetochlor-1.png", height = 6, width=10, dpi=600)
+```
+
+#acetochlor-2
+```{r warning=FALSE}
+PREacecto2 <- PRE %>% 
+  filter(AI=="acetochlor-2")
+
+PREacecto2model <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREacecto2)
+PREacecto2model2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREacecto2)
+
+anova(PREacecto2model, PREacecto2model2)
+
+plot(PREacecto2model, type="average", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+plot(PREacecto2model2, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREacecto2model, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREacecto2model, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREacecto2$Rate0 <- PREacecto2$Rate
+PREacecto2$Rate0[PREacecto2$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREacecto2, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="acetochlor-2") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PREacetochlor-2.png", height = 6, width=10, dpi=600)
+```
+
+#S-metolachlor
+```{r warning=FALSE}
+PREsmet <- PRE %>% 
+  filter(AI=="S-metolachlor")
+
+PREsmetmodel <- drm(Biomass_Red.*100 ~ Rate, Cultivar, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREsmet)
+PREsmetmodel2 <- drm(Biomass_Red.*100 ~ Rate, fct=l3(fixed =c(NA,100,NA), names = c("slope", "upper", "ed50")), data=PREsmet)
+
+anova(PREsmetmodel, PREsmetmodel2)
+
+plot(PREsmetmodel, type="confidence", col=c(1,2), xlab="g ai/ha",#log="", 
+     legendPos=c(3.5,50))
+ED(PREsmetmodel, c(10, 50, 90), type="absolute", interval ="delta")
+```
+
+```{r message=FALSE, warning=FALSE}
+newdata <- expand.grid(Rate=exp(seq(log(0.001), log(4), by=0.001)))
+
+newdata1 <- data.frame(Cultivar = "X-59", newdata)
+newdata2 <- data.frame(Cultivar = "CRS-1", newdata)
+nd <- rbind(newdata1, newdata2)
+
+
+pm <- predict(PREsmetmodel, newdata = nd, interval="confidence")
+
+
+nd$p <- pm[,1]
+nd$pmin <- pm[,2]
+nd$pmax <- pm[,3]
+
+PREsmet$Rate0 <- PREsmet$Rate
+PREsmet$Rate0[PREsmet$Rate0==0] <- 0.001
+```
+
+```{r}
+ggplot(PREsmet, aes(x=Rate0, y=Biomass_Red.*100, color=Cultivar, fill=Cultivar)) + geom_point(stat="identity") + labs(y="", x="g ai/ha", title="S-metolachlor") +  theme(plot.title = element_text(hjust = 0.5)) + theme_bw() + theme(axis.text=element_text(size=16)) +
+  geom_line(data=nd, aes(x=Rate, y=p, color=Cultivar), size=1) + theme(legend.title = element_blank(), text = element_text(size=16, color="black"), plot.title=element_text(hjust = 0.5))+ scale_fill_manual(values = c("#494949", "#c5050c")) + scale_color_manual(values = c("#494949", "#c5050c")) + theme(legend.position = "none") + ggsave("PRES-metolachlor.png", height = 6, width=10, dpi=600)
+```
+
+
+
