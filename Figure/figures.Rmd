@@ -1,0 +1,227 @@
+---
+title: "figure"
+author: "Maxwel Coura Oliveira"
+date: "4/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(vroom)
+library(ggtext)
+library(ggthemes)
+library(patchwork)
+library(gridExtra)
+library(tidytext)
+```
+
+```{r}
+pre <- vroom("PRE1X.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(lower = as.double(str_remove(lower, "\t"))) %>% 
+  mutate_if(is_character, as_factor) %>% 
+  mutate(p_value_status = if_else(p_value > 0.05, "Equal", "Not equal"))
+```
+
+```{r}
+pre1 <- pre %>% 
+  mutate(herbicide = fct_recode(herbicide,
+             "imazethapyr" = "imazethapry",
+             "_S_-metolachlor" = "S-metolachlor",
+             "dimethenamid-P" = "dimethenamid-p",
+             "acetochlor" = "acetochlor-1 (Harness)"))
+```
+
+
+
+```{r}
+pre_fig <- pre1  %>% 
+  mutate(herbicide = reorder_within(herbicide, by = bio_red, within = cultivar)) %>% 
+  ggplot(aes(x = herbicide, y = bio_red, 
+             color = p_value_status)) +
+  coord_flip() +
+  geom_point() +
+  geom_linerange(aes(ymin = lower, ymax = upper), key_glyph = "path") +
+  facet_wrap(~ cultivar, scales = "free", ncol = 1) +
+  theme_test() +
+  scale_x_reordered() +
+  labs(y = "Biomass reduction (%)", x = "", color = "F-test") +
+  scale_color_manual(values = c("blue", "red"),
+                     guide = guide_legend(title.position = "left",
+                                          direction = "horizontal")) +
+  ylim(0, 105) +
+  theme(axis.text.y =  element_markdown(),
+        legend.position = "bottom",
+        strip.text = element_markdown(size = 11, face = "bold")) +
+  ggsave("pre.png", width = 5, height = 8)
+```
+
+
+
+```{r}
+pre_table <- pre1[1:20, 1:3] %>% 
+  mutate(p_value = round(p_value, 2)) %>% 
+  rename("Herbicide" = "herbicide",
+         'Rate^1' = "rate",
+         "P-value^2" = "p_value")
+
+
+
+foot1 <- expression(paste(""^"1","Rates in g ai or ae ha"^"-1",""))
+footnote1 <- textGrob(foot1, 
+                     x=unit(0.3,"npc") - 0.5*w,
+                     y=unit(0.23,"npc") - 0.5*h, 
+                     vjust=1, hjust=0, gp = gpar(fontsize = 5))
+
+foot2 <- expression(paste(""^"2","If P-value > 0.05, herbicide effect on cultivars are equal"))
+footnote2 <- textGrob(foot2, 
+                     x=unit(0.3,"npc") - 0.5*w,
+                     y=unit(0.215,"npc") - 0.5*h, 
+                     vjust=1, hjust=0, gp = gpar(fontsize = 5))
+
+
+tt1 <- ttheme_default(base_size = 7, colhead=list(fg_params = list(parse=TRUE)),
+                      rowhead=list(fg_params = list(parse=TRUE)))
+
+g <- tableGrob(pre_table <- pre_table, rows = NULL, theme = tt1)
+g <- gtable_add_grob(g,
+        grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+        t = 2, b = nrow(g), l = 1, r = ncol(g))
+g <- gtable_add_grob(g,
+        grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+        t = 1, l = 1, r = ncol(g))
+
+
+gg <- gTree(children=gList(g, footnote1))
+gg <- gTree(children=gList(gg, footnote2))
+```
+
+
+
+
+````{r}
+comb_pre <- pre_fig  +  gg 
+
+
+  ggsave("fig_pre.png", comb_pre, width = 7, height = 7)
+```
+
+
+
+
+```{r warning = FALSE, message = FALSE}
+post <- vroom("POST1X.csv") %>% 
+  janitor::row_to_names(row_number = 1) %>% 
+  janitor::clean_names() %>% 
+  janitor::remove_empty() %>% 
+  filter(herbicide != "Footnotes") %>% 
+#  mutate(upper = as.double(str_remove(lower, "\t"))) %>% 
+  mutate_if(is_character, str_squish) %>% 
+  mutate_at(c("p_value", "bio_red", "lower", "upper"), as.double) %>% 
+  rename(`rate` = x1x_rate) %>% 
+  mutate_if(is_character, as_factor) %>% 
+  mutate(p_value_status = if_else(p_value > 0.05, "Equal", "Not equal")) 
+```
+
+
+
+```{r}
+post_fig <- post %>% 
+  mutate(herbicide = reorder_within(herbicide, by = bio_red, within = cultivar)) %>% 
+  ggplot(aes(x = herbicide, y = bio_red, 
+             color = p_value_status)) +
+  coord_flip() +
+  geom_point() +
+  geom_linerange(aes(ymin = lower, ymax = upper), key_glyph = "path") +
+  scale_x_reordered() +
+  facet_wrap(~ cultivar, scales = "free", ncol = 1) +
+  theme_test() +
+  labs(y = "Biomass reduction (%)", x = "", color = "F-test") +
+  scale_color_manual(values = c("blue", "red"),
+                     guide = guide_legend(title.position = "left",
+                                          direction = "horizontal")) +
+  ylim(0, 105) +
+  theme(axis.text.y =  element_markdown(),
+        legend.position = "bottom",
+        strip.text = element_markdown(size = 11, face = "bold")) +
+  ggsave("post.png", width = 5, height = 8)
+
+post_fig
+```
+
+
+```{r}
+library(gt)
+
+
+post_tb <- post %>% 
+  distinct(herbicide, .keep_all = TRUE) %>% 
+  dplyr::select(herbicide, `rate`, p_value) %>% 
+  rename(Herbicide = herbicide,
+         `Rate (g ai ha-1)` = rate,
+         `P-value` = p_value) %>% 
+  gt()
+
+gtsave(filename = "post_tb.png", data = post_tb)
+```
+
+
+```{r}
+post_table <- post[1:17, 1:3] %>% 
+  mutate(p_value = round(p_value, 2)) %>% 
+  rename("Herbicide" = "herbicide",
+         'Rate^1' = "rate",
+         "P-value^2" = "p_value")
+
+
+
+foot1 <- expression(paste(""^"1","Rates in g ai or ae ha"^"-1",""))
+footnote1 <- textGrob(foot1, 
+                     x=unit(0.3,"npc") - 0.5*w,
+                     y=unit(0.28,"npc") - 0.5*h, 
+                     vjust=1, hjust=0, gp = gpar(fontsize = 5))
+
+foot2 <- expression(paste(""^"2","If P-value > 0.05, herbicide effect on cultivars are equal"))
+footnote2 <- textGrob(foot2, 
+                     x=unit(0.3,"npc") - 0.5*w,
+                     y=unit(0.265,"npc") - 0.5*h, 
+                     vjust=1, hjust=0, gp = gpar(fontsize = 5))
+
+
+tt1 <- ttheme_default(base_size = 7, colhead=list(fg_params = list(parse=TRUE)),
+                      rowhead=list(fg_params = list(parse=TRUE)),
+                      bg_params = list(fill=c(rep(c("grey95", "grey90"),
+                                    length.out=4), "#6BAED6")))
+
+g <- tableGrob(post_table <- post_table, rows = NULL, theme = tt1)
+g <- gtable_add_grob(g,
+        grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+        t = 2, b = nrow(g), l = 1, r = ncol(g))
+g <- gtable_add_grob(g,
+        grobs = rectGrob(gp = gpar(fill = NA, lwd = 2)),
+        t = 1, l = 1, r = ncol(g))
+
+
+gg <- gTree(children=gList(g, footnote1))
+gg <- gTree(children=gList(gg, footnote2))
+```
+
+
+
+
+````{r}
+comb_post <- post_fig  +  gg 
+
+
+  ggsave("fig_post.png", comb_post, width = 7, height = 7)
+```
+
+
+
+
+
+

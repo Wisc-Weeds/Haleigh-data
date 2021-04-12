@@ -80,10 +80,6 @@ pm <- as.data.frame(pm) %>% # make it a data frame
   mutate(Rate = c(1:2240)) %>% # add a new column of rates from 0 to max herbicide rate (0 to 2240)
   filter(Rate == "560") # filter to the herbicide rate used 
 pm
-
-
-
-
 ```
 
 
