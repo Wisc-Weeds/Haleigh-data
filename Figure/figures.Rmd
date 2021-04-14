@@ -144,7 +144,6 @@ post <- vroom("POST1X.csv") %>%
 ```
 
 
-
 ```{r}
 post_fig <- post %>% 
   mutate(herbicide = reorder_within(herbicide, by = bio_red, within = cultivar)) %>% 
