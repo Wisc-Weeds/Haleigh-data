@@ -32,10 +32,28 @@ pre <- vroom("PRE1X.csv") %>%
 ```{r}
 pre1 <- pre %>% 
   mutate(herbicide = fct_recode(herbicide,
-             "imazethapyr" = "imazethapry",
-             "_S_-metolachlor" = "S-metolachlor",
-             "dimethenamid-P" = "dimethenamid-p",
-             "acetochlor" = "acetochlor-1 (Harness)"))
+             "imazethapyr (<b style='color:#ff9425;'>2</b>)" = "imazethapry",
+             "imazethapyr (<b style='color:#ff9425;'>2</b>)" = "imazethapyr",
+             "_S_-metolachlor (<b style='color:#89b2c4;'>2</b>)" = "S-metolachlor",
+             "dimethenamid-P (<b style='color:#89b2c4;'>2</b>)" = "dimethenamid-p",
+             "acetochlor (<b style='color:#89b2c4;'>2</b>)" = "acetochlor-1 (Harness)",
+             "atrazine (<b style='color:#aaaaaa;'>5</b>)" = "atrazine",
+             "isoxaflutole (<b style='color:#722257;'>27</b>)" = "isoxaflutole",
+             "metribuzin (<b style='color:#aaaaaa;'>5</b>)" = "metribuzin",
+             "dicamba (<b style='color:#000000;'>4</b>)" = "dicamba",
+             "sulfentrazone (<b style='color:#b3271b;'>14</b>)" = "sulfentrazone",
+             "tembotrione (<b style='color:#722257;'>27</b>)" = "tembotrione",
+             "pyroxasulfone (<b style='color:#89b2c4;'>15</b>)" = "pyroxasulfone",
+             "pendimethalin (<b style='color:#edbe3c;'>3</b>)" = "pendimethalin",
+             "topramezone (<b style='color:#722257;'>27</b>)" = "topramezone",
+             "chloransulam-methyl (<b style='color:#ff9425;'>2</b>)" = "chloransulam-methyl",
+             "fomesafen (<b style='color:#b3271b;'>14</b>)" = "fomesafen",
+             "flumioxazin (<b style='color:#b3271b;'>14</b>)" = "flumioxazin",
+             "chlorimuron-ethyl (<b style='color:#ff9425;'>2</b>)" = "chlorimuron ethyl",
+             "saflufenacil (<b style='color:#b3271b;'>14</b>)" = "saflufenacil",
+             "2,4-D (<b style='color:#000000;'>4</b>)" = "2,4-D",
+             "clopyralid (<b style='color:#000000;'>4</b>)" = "clopyralid"
+             ))
 ```
 
 
@@ -46,19 +64,26 @@ pre_fig <- pre1  %>%
   ggplot(aes(x = herbicide, y = bio_red, 
              color = p_value_status)) +
   coord_flip() +
-  geom_point() +
-  geom_linerange(aes(ymin = lower, ymax = upper), key_glyph = "path") +
+  ggpubr::background_image(img) +
+  geom_point(size = 3) +
+  geom_linerange(aes(ymin = lower, ymax = upper), key_glyph = "path", size = 1.5) +
   facet_wrap(~ cultivar, scales = "free", ncol = 1) +
-  theme_test() +
+  theme_classic() +
   scale_x_reordered() +
   labs(y = "Biomass reduction (%)", x = "", color = "F-test") +
-  scale_color_manual(values = c("blue", "red"),
-                     guide = guide_legend(title.position = "left",
-                                          direction = "horizontal")) +
+#  scale_color_manual(values = c("#31352E", "#0000FF"),
+#                     guide = guide_legend(title.position = "left",
+#                                          direction = "horizontal")) +
+  scale_color_brewer(palette = "Set1") +
   ylim(0, 105) +
   theme(axis.text.y =  element_markdown(),
         legend.position = "bottom",
-        strip.text = element_markdown(size = 11, face = "bold")) +
+        axis.text.x = element_markdown(),
+#        plot.background = element_rect(fill = "#948946"),
+        strip.background = element_blank(), strip.text = element_textbox(
+          size = 12, color = "white", fill = "#31a35d", box.color = "#31a35d",
+          halign = 0.5, linetype = 1, r = unit(5, "pt"), width = unit(1, "npc"),
+          padding = margin(2, 0, 1, 0), margin = margin(3, 3, 3, 3))) +
   ggsave("pre.png", width = 5, height = 8)
 ```
 
@@ -114,14 +139,20 @@ theme_style <- theme(legend.position = "bottom",
 theme_set(theme_style)
 ```
 
+```{r}
+#weed = "<img src='https://toppng.com/uploads/preview/weed-11550712630dy5wzdkvnd.png'
+#    width='100' />"
+
+download.file('https://media.dojmt.gov/wp-content/uploads/photodune-7861435-marijuana-isolated-on-white-background-m-1.jpg',
+              destfile= 'weed.png')                     
+#img <- png::readPNG('weed.png')
+img <- jpeg::readJPEG('weed.jpg')
+```
+
 
 ````{r}
-
-weed = "<img src='https://toppng.com/uploads/preview/weed-11550712630dy5wzdkvnd.png'
-    width='100' />"
-
 comb_pre <- pre_fig  +  gg +
-  plot_annotation(title = weed) 
+  ggpubr::background_image(img) 
 
 
   ggsave("fig_pre.png", comb_pre, width = 7, height = 7)
@@ -144,28 +175,64 @@ post <- vroom("POST1X.csv") %>%
   mutate(p_value_status = if_else(p_value > 0.05, "Equal", "Not equal")) 
 ```
 
+```{r}
+post1 <- post %>% 
+  mutate(herbicide = fct_recode(herbicide,
+             "imazethapyr (<b style='color:#ff9425;'>2</b>)" = "imazethapry",
+             "imazethapyr (<b style='color:#ff9425;'>2</b>)" = "imazethapyr",
+             "isoxaflutole (<b style='color:#722257;'>27</b>)" = "isoxaflutole",
+             "mesotrione (<b style='color:#722257;'>27</b>)" = "mesotrione",
+             "glufosinate (<b style='color:#23bbff;'>2</b>)" = "glufosinate",
+             "acetochlor (<b style='color:#89b2c4;'>2</b>)" = "acetochlor-1 (Harness)",
+             "bentazon (<b style='color:#aaaaaa;'>5</b>)" = "bentazon",
+             "glyphosate (<b style='color:#238c5d;'>27</b>)" = "glyphosate",
+             "metribuzin (<b style='color:#aaaaaa;'>5</b>)" = "metribuzin",
+             "dicamba (<b style='color:#000000;'>4</b>)" = "dicamba",
+             "atrazine (<b style='color:#aaaaaa;'>5</b>)" = "atrazine",
+             "lactofen (<b style='color:#b3271b;'>14</b>)" = "lactofen",
+             "tembotrione (<b style='color:#722257;'>27</b>)" = "tembotrione",
+             "rimsulfuron (<b style='color:#89b2c4;'>2</b>)" = "rimsulfuron",
+             "clethodim (<b style='color:#fd8dc8;'>3</b>)" = "clethodim",
+             "topramezone (<b style='color:#722257;'>27</b>)" = "topramezone",
+             "chloransulam-methyl (<b style='color:#ff9425;'>2</b>)" = "chloransulam-methyl",
+             "fomesafen (<b style='color:#b3271b;'>14</b>)" = "fomesafen",
+             "fluthiacet-methyl (<b style='color:#b3271b;'>14</b>)" = "fluthiacet-methyl",
+             "chlorimuron-ethyl (<b style='color:#ff9425;'>2</b>)" = "chlorimuron-ethyl",
+             "saflufenacil (<b style='color:#b3271b;'>14</b>)" = "saflufenacil",
+             "2,4-D (<b style='color:#000000;'>4</b>)" = "2,4-D",
+             "clopyralid (<b style='color:#000000;'>4</b>)" = "clopyralid"
+             ))
+```
 
 ```{r}
-post_fig <- post %>% 
+post_fig <- post1 %>% 
   mutate(herbicide = reorder_within(herbicide, by = bio_red, within = cultivar)) %>% 
   ggplot(aes(x = herbicide, y = bio_red, 
              color = p_value_status)) +
   coord_flip() +
-  geom_point() +
-  geom_linerange(aes(ymin = lower, ymax = upper), key_glyph = "path") +
+  ggpubr::background_image(img) +
+  geom_point(size = 3) +
+  geom_linerange(aes(ymin = lower, ymax = upper), key_glyph = "path", size = 1.5) +
   scale_x_reordered() +
   facet_wrap(~ cultivar, scales = "free", ncol = 1) +
-  theme_test() +
-  labs(y = "Biomass reduction (%)", x = "", color = "F-test") +
+  theme_classic() +
+  labs(y = "Biomass reduction (%)", 
+       x = "", 
+       color = "F-test") +
   scale_color_manual(values = c("blue", "red"),
                      guide = guide_legend(title.position = "left",
                                           direction = "horizontal")) +
   ylim(0, 105) +
   theme(axis.text.y =  element_markdown(),
         legend.position = "bottom",
-        strip.text = element_markdown(size = 11, face = "bold")) +
+        plot.title = element_markdown(),
+        axis.text.x = element_markdown(),
+#        plot.background = element_rect(fill = "#948946"),
+        strip.background = element_blank(), strip.text = element_textbox(
+          size = 12, color = "white", fill = "#31a35d", box.color = "#31a35d",
+          halign = 0.5, linetype = 1, r = unit(5, "pt"), width = unit(1, "npc"),
+          padding = margin(2, 0, 1, 0), margin = margin(3, 3, 3, 3))) +
   ggsave("post.png", width = 5, height = 8)
-
 post_fig
 ```
 
@@ -197,14 +264,14 @@ post_table <- post[1:17, 1:3] %>%
 
 foot1 <- expression(paste(""^"1","Rates in g ai or ae ha"^"-1",""))
 footnote1 <- textGrob(foot1, 
-                     x=unit(0.3,"npc") - 0.5*w,
-                     y=unit(0.28,"npc") - 0.5*h, 
+                     x=unit(0.12,"npc"),
+                     y=unit(0.15,"npc"), 
                      vjust=1, hjust=0, gp = gpar(fontsize = 5))
 
 foot2 <- expression(paste(""^"2","If P-value > 0.05, herbicide effect on cultivars are equal"))
 footnote2 <- textGrob(foot2, 
-                     x=unit(0.3,"npc") - 0.5*w,
-                     y=unit(0.265,"npc") - 0.5*h, 
+                     x=unit(0.3,"npc"),
+                     y=unit(0.135,"npc"), 
                      vjust=1, hjust=0, gp = gpar(fontsize = 5))
 
 
