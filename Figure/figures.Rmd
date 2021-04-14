@@ -102,21 +102,22 @@ gg <- gTree(children=gList(g, footnote1))
 gg <- gTree(children=gList(gg, footnote2))
 ```
 
+
 ```{r}
 theme_style <- theme(legend.position = "bottom",
                      plot.background = element_rect(color = NA),
                      legend.text = element_markdown(),
                      plot.title = element_markdown(size = 18, margin = margin(3, 0, 3, 0)),
-                     plot.subtitle = element_markdown(size = 5, hjust = 0,,
+                     plot.subtitle = element_markdown(size = 5, hjust = 0,
                                                   color = title),
                      plot.caption = element_markdown(size = 4))
 theme_set(theme_style)
 ```
-https://cdn.shopify.com/s/files/1/0087/5583/9012/products/maijuana_sativa_cut_28_grande.jpg?v=1561330148
+
 
 ````{r}
 
-weed = "<img src='https://cdn.shopify.com/s/files/1/0945/7542/products/19CC1168_Marijuana.jpg?v=1564535747'
+weed = "<img src='https://toppng.com/uploads/preview/weed-11550712630dy5wzdkvnd.png'
     width='100' />"
 
 comb_pre <- pre_fig  +  gg +
