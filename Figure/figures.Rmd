@@ -14,8 +14,10 @@ library(tidyverse)
 library(vroom)
 library(ggtext)
 library(ggthemes)
+library(grid)
 library(patchwork)
 library(gridExtra)
+library(gtable)
 library(tidytext)
 ```
 
@@ -73,14 +75,14 @@ pre_table <- pre1[1:20, 1:3] %>%
 
 foot1 <- expression(paste(""^"1","Rates in g ai or ae ha"^"-1",""))
 footnote1 <- textGrob(foot1, 
-                     x=unit(0.3,"npc") - 0.5*w,
-                     y=unit(0.23,"npc") - 0.5*h, 
+                     x=unit(0.12,"npc"),
+                     y=unit(0.15,"npc"), 
                      vjust=1, hjust=0, gp = gpar(fontsize = 5))
 
 foot2 <- expression(paste(""^"2","If P-value > 0.05, herbicide effect on cultivars are equal"))
 footnote2 <- textGrob(foot2, 
-                     x=unit(0.3,"npc") - 0.5*w,
-                     y=unit(0.215,"npc") - 0.5*h, 
+                     x=unit(0.12,"npc"),
+                     y=unit(0.135,"npc"), 
                      vjust=1, hjust=0, gp = gpar(fontsize = 5))
 
 
@@ -100,11 +102,25 @@ gg <- gTree(children=gList(g, footnote1))
 gg <- gTree(children=gList(gg, footnote2))
 ```
 
-
-
+```{r}
+theme_style <- theme(legend.position = "bottom",
+                     plot.background = element_rect(color = NA),
+                     legend.text = element_markdown(),
+                     plot.title = element_markdown(size = 18, margin = margin(3, 0, 3, 0)),
+                     plot.subtitle = element_markdown(size = 5, hjust = 0,,
+                                                  color = title),
+                     plot.caption = element_markdown(size = 4))
+theme_set(theme_style)
+```
+https://cdn.shopify.com/s/files/1/0087/5583/9012/products/maijuana_sativa_cut_28_grande.jpg?v=1561330148
 
 ````{r}
-comb_pre <- pre_fig  +  gg 
+
+weed = "<img src='https://cdn.shopify.com/s/files/1/0945/7542/products/19CC1168_Marijuana.jpg?v=1564535747'
+    width='100' />"
+
+comb_pre <- pre_fig  +  gg +
+  plot_annotation(title = weed) 
 
 
   ggsave("fig_pre.png", comb_pre, width = 7, height = 7)
